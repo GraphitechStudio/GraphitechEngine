@@ -7,10 +7,12 @@
 #include <Window/Window.hpp>
 #include <Debugger/Debug.hpp>
 #include <Render/RenderContext.hpp>
+#include <Render/SpriteRenderSystem.hpp>
 #include <cmath>
 #include <iostream>
 #include <sstream>
 #include <vector>
+#include <memory>
 
 MOD("SceneRenderer");
 
@@ -30,6 +32,10 @@ struct SceneRenderer::Impl {
     int viewportY = 0;
     int viewportWidth = 640;
     int viewportHeight = 480;
+    
+    // Sprite rendering system
+    std::unique_ptr<Graphitech::SpriteRenderSystem> spriteRenderSystem = nullptr;
+    bool spriteRenderSystemInitialized = false;
 };
 
 SceneRenderer::SceneRenderer() : impl_(std::make_unique<Impl>()) {}
@@ -58,6 +64,11 @@ bool SceneRenderer::init(int w, int h, [[maybe_unused]] const char *title)
 
 void SceneRenderer::terminate()
 {
+    if (impl_->spriteRenderSystem) {
+        impl_->spriteRenderSystem->Release();
+        impl_->spriteRenderSystem.reset();
+    }
+    
     if(impl_->window){
         glfwDestroyWindow(impl_->window);
         impl_->window = nullptr;
@@ -148,6 +159,19 @@ void SceneRenderer::render(ECS::Scene &scene)
         DEBUG_INFO("RenderContext initialized successfully");
     }
     
+    // Initialize SpriteRenderSystem lazily
+    if (!impl_->spriteRenderSystemInitialized) {
+        impl_->spriteRenderSystem = std::make_unique<Graphitech::SpriteRenderSystem>();
+        if (!impl_->spriteRenderSystem->Initialize()) {
+            DEBUG_WARN("Failed to initialize SpriteRenderSystem");
+            impl_->spriteRenderSystem.reset();
+        } else {
+            impl_->spriteRenderSystem->UpdateProjection(impl_->logicalWidth, impl_->logicalHeight);
+            impl_->spriteRenderSystemInitialized = true;
+            DEBUG_INFO("SpriteRenderSystem initialized successfully");
+        }
+    }
+    
     auto& api = RenderContext::GetAPI();
     
     int fbW, fbH; 
@@ -219,6 +243,11 @@ void SceneRenderer::render(ECS::Scene &scene)
         api.Vertex(cx - xr->half, cy - xr->half); api.Vertex(cx + xr->half, cy + xr->half);
         api.Vertex(cx - xr->half, cy + xr->half); api.Vertex(cx + xr->half, cy - xr->half);
         api.EndDraw();
+    }
+
+    // Render all sprites with textures using batch rendering
+    if (impl_->spriteRenderSystem && impl_->spriteRenderSystemInitialized) {
+        impl_->spriteRenderSystem->RenderSprites(scene, impl_->logicalWidth, impl_->logicalHeight);
     }
 
     const std::string curMap = scene.getCurrentMap();
