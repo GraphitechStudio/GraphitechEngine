@@ -11,12 +11,18 @@ namespace Graphitech {
         static constexpr uint32_t MAGIC_NUMBER = 0x52545950;
         static constexpr uint8_t PROTOCOL_VERSION = 1;
 
+        static constexpr float WORLD_WIDTH = 1920.0f;
+        static constexpr float WORLD_HEIGHT = 1080.0f;
+
         enum class PacketType : uint8_t {
             CLIENT_CONNECT = 0x01,
             SERVER_ACCEPT = 0x02,
             PING = 0x03,
+            PONG = 0x04,
             INPUT = 0x10,
-            WORLD_UPDATE = 0x20
+            WORLD_UPDATE = 0x20,
+            PROJECTILE_SPAWN = 0x30,
+            ENTITY_DESTROY = 0x31
         };
 
         enum Input : uint8_t {

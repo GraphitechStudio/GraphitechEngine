@@ -57,8 +57,12 @@ namespace Graphitech {
                     hdr->type = static_cast<uint8_t>(PacketType::PING);
                     hdr->sequence = 0;
                     m_socket.Send(packet.data(), packet.size(), m_serverEndpoint);
+                    
                     m_lastPacketSent = now;
-                    std::cout << "[Client] Sent PING" << std::endl;
+                    m_lastPingSent = now;
+                    
+                    m_stats.packetsSent++;
+                    m_stats.bytesSent += packet.size();
                 }
             }
 
@@ -69,6 +73,8 @@ namespace Graphitech {
                 ssize_t len = m_socket.Receive(buffer.data(), buffer.size(), sender);
                 if (len <= 0) break;
                 
+                m_stats.packetsReceived++;
+                m_stats.bytesReceived += len;
                 HandlePacket(buffer, (size_t)len);
             }
         }
@@ -81,6 +87,13 @@ namespace Graphitech {
             if (ntohl(hdr->magic) != MAGIC_NUMBER) return;
 
             m_lastPacketReceived = std::chrono::steady_clock::now();
+
+            if (hdr->type == static_cast<uint8_t>(PacketType::PONG)) {
+                auto now = std::chrono::steady_clock::now();
+                float rtt = std::chrono::duration<float, std::milli>(now - m_lastPingSent).count();
+                m_stats.rtt = rtt;
+                return;
+            }
 
             if (hdr->type == static_cast<uint8_t>(PacketType::WORLD_UPDATE)) {
                 bool is_newer = false;
@@ -108,8 +121,13 @@ namespace Graphitech {
                 }
             }
             else if (m_state == ClientState::Connected) {
-                if (hdr->type == static_cast<uint8_t>(PacketType::WORLD_UPDATE)) {
+                uint8_t t = hdr->type;
+                if (t == static_cast<uint8_t>(PacketType::WORLD_UPDATE) ||
+                    t == static_cast<uint8_t>(PacketType::PROJECTILE_SPAWN) ||
+                    t == static_cast<uint8_t>(PacketType::ENTITY_DESTROY)) {
+                    
                     WorldUpdate update;
+                    update.type = t;
                     update.rawData.assign(buffer.begin() + sizeof(PacketHeader), buffer.begin() + size);
                     m_worldUpdates.push_back(update);
                 }
@@ -126,6 +144,9 @@ namespace Graphitech {
             
             m_socket.Send(packet.data(), packet.size(), m_serverEndpoint);
             m_lastPacketSent = std::chrono::steady_clock::now();
+            
+            m_stats.packetsSent++;
+            m_stats.bytesSent += packet.size();
         }
 
         void Client::SendInput(uint8_t inputMask) {
@@ -141,7 +162,9 @@ namespace Graphitech {
             packet[sizeof(PacketHeader)] = inputMask;
 
             if (m_socket.Send(packet.data(), packet.size(), m_serverEndpoint)) {
-                std::cout << "[Client] Sent INPUT " << (int)inputMask << std::endl;
+                // std::cout << "[Client] Sent INPUT " << (int)inputMask << std::endl;
+                m_stats.packetsSent++;
+                m_stats.bytesSent += packet.size();
             } else {
                 std::cerr << "[Client] Failed to send INPUT" << std::endl;
             }

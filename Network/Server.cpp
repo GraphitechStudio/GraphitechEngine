@@ -82,6 +82,16 @@ namespace Graphitech {
                         m_eventQueue.push_back({ServerEvent::Input, clientId, inputData});
                     }
                 }
+                else if (hdr->type == static_cast<uint8_t>(PacketType::PING)) {
+                    // Send PONG
+                    std::vector<uint8_t> pong(sizeof(PacketHeader));
+                    PacketHeader* ph = reinterpret_cast<PacketHeader*>(pong.data());
+                    ph->magic = htonl(MAGIC_NUMBER);
+                    ph->version = PROTOCOL_VERSION;
+                    ph->type = static_cast<uint8_t>(PacketType::PONG);
+                    ph->sequence = 0;
+                    m_socket.Send(pong.data(), pong.size(), sender);
+                }
             }
         }
 
