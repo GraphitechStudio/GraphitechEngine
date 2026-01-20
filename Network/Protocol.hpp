@@ -23,7 +23,8 @@ namespace Graphitech {
             INPUT = 0x10,
             WORLD_UPDATE = 0x20,
             PROJECTILE_SPAWN = 0x30,
-            ENTITY_DESTROY = 0x31
+            ENTITY_DESTROY = 0x31,
+            GAME_RESET = 0x40
         };
 
         enum Input : uint8_t {

@@ -149,6 +149,9 @@ namespace Graphitech {
                             m_eventQueue.push_back({ServerEvent::Input, id, inputData});
                         }
                     }
+                    else if (hdr->type == static_cast<uint8_t>(PacketType::GAME_RESET)) {
+                        m_eventQueue.push_back({ServerEvent::GameReset, id, 0});
+                    }
                     else if (hdr->type == static_cast<uint8_t>(PacketType::PING)) {
                          // Pong on UDP
                         std::vector<uint8_t> pong(sizeof(PacketHeader));

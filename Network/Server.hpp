@@ -17,7 +17,7 @@ namespace Graphitech {
     namespace Network {
 
         struct ServerEvent {
-            enum Type { Connect, Disconnect, Input };
+            enum Type { Connect, Disconnect, Input, GameReset };
             Type type;
             uint32_t clientId;
             uint8_t data;

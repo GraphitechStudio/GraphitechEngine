@@ -45,6 +45,8 @@ namespace Graphitech {
 
             void SendInput(uint8_t inputMask);
 
+            void SendGameReset();
+
             bool PopWorldUpdate(WorldUpdate& update);
 
             ClientState GetState() const { return m_state; }
