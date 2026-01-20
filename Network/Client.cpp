@@ -213,23 +213,6 @@ namespace Graphitech {
             m_lastPacketSent = std::chrono::steady_clock::now();
         }
 
-        void Client::SendGameReset() {
-            if (m_state != ClientState::Connected) return;
-
-            std::vector<uint8_t> packet(sizeof(PacketHeader));
-            PacketHeader* hdr = reinterpret_cast<PacketHeader*>(packet.data());
-            hdr->magic = htonl(MAGIC_NUMBER);
-            hdr->version = PROTOCOL_VERSION;
-            hdr->type = static_cast<uint8_t>(PacketType::GAME_RESET);
-            hdr->sequence = 0;
-
-            if (m_udpSocket.Send(packet.data(), packet.size(), m_serverEndpoint)) {
-                m_stats.packetsSent++;
-                m_stats.bytesSent += packet.size();
-            }
-            m_lastPacketSent = std::chrono::steady_clock::now();
-        }
-
         bool Client::PopWorldUpdate(WorldUpdate& update) {
             if (m_worldUpdates.empty()) return false;
             update = m_worldUpdates.front();
