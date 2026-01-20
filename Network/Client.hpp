@@ -3,6 +3,7 @@
 
 
 #include "UDPSocket.hpp"
+#include "TCPSocket.hpp"
 #include "Protocol.hpp"
 #include <deque>
 #include <vector>
@@ -53,10 +54,12 @@ namespace Graphitech {
 
         private:
             void HandlePacket(const std::vector<uint8_t>& buffer, size_t size);
-            void SendConnectPacket();
+            void SendUDPHandshake();
 
-            UDPSocket m_socket;
+            UDPSocket m_udpSocket;
+            TCPSocket m_tcpSocket;
             Endpoint m_serverEndpoint;
+            
             ClientState m_state;
             uint32_t m_clientId;
             
