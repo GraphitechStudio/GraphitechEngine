@@ -30,7 +30,10 @@ namespace Graphitech {
             IN_DOWN  = 0x02,
             IN_LEFT  = 0x04,
             IN_RIGHT = 0x08,
-            IN_SHOOT = 0x10
+            IN_SHOOT = 0x10,
+            IN_WEAPON1 = 0x20,
+            IN_WEAPON2 = 0x40,
+            IN_WEAPON3 = 0x80
         };
 
         struct PacketHeader {
