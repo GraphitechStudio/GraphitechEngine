@@ -26,10 +26,10 @@ public:
     static const uint8_t* GetCharBitmap(char c);
     
     // Calculate text width in pixels
-    static int GetTextWidth(const std::string& text, float scale = 1.0f);
+    static float GetTextWidth(const std::string& text, float scale = 1.0f);
     
     // Calculate text height in pixels
-    static int GetTextHeight(float scale = 1.0f);
+    static float GetTextHeight(float scale = 1.0f);
 };
 
 } // namespace UI

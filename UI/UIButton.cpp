@@ -158,9 +158,14 @@ void UIButton::Render() {
 
         std::vector<std::string> lines = wrapText(text_, maxTextWidth, maxLines);
 
-        // Compute starting Y so the block sits near the bottom with padding
+        // Compute starting Y: center vertically if no preview texture, otherwise sit near bottom
         float totalHeight = (float)lines.size() * lineHeight + (float)(lines.size() - 1) * 2.0f;
-        float textStartY = position_.y + size_.y - totalHeight - 8.0f;
+        float textStartY;
+        if (hasPreviewTexture_ && previewTextureId_ != 0) {
+            textStartY = position_.y + size_.y - totalHeight - 8.0f;
+        } else {
+            textStartY = position_.y + (size_.y - totalHeight) / 2.0f;
+        }
 
         for (size_t i = 0; i < lines.size(); ++i) {
             float lineW = BitmapFont::GetTextWidth(lines[i], scale);

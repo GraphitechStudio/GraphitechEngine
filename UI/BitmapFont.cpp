@@ -204,12 +204,12 @@ const uint8_t* BitmapFont::GetCharBitmap(char c) {
     return FONT_DATA[c - 32];
 }
 
-int BitmapFont::GetTextWidth(const std::string& text, float scale) {
-    return (text.length() * (FONT_CHAR_WIDTH + 1)) * scale; // +1 for spacing between characters
+float BitmapFont::GetTextWidth(const std::string& text, float scale) {
+    return (text.length() * (FONT_CHAR_WIDTH + 1.5f)) * scale; // 1.5f spacing matches UIRenderer::DrawText
 }
 
-int BitmapFont::GetTextHeight(float scale) {
-    return FONT_CHAR_HEIGHT * scale;
+float BitmapFont::GetTextHeight(float scale) {
+    return static_cast<float>(FONT_CHAR_HEIGHT) * scale;
 }
 
 } // namespace UI
