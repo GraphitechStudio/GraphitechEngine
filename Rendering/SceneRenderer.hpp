@@ -90,6 +90,13 @@ namespace Graphitech {
         void setEventHandler(Graphitech::EventHandler* h);
 
         /**
+         * @brief Sets the camera offset (e.g. for screen shake).
+         * @param x Offset X in logical pixels
+         * @param y Offset Y in logical pixels
+         */
+        void setCameraOffset(float x, float y);
+
+        /**
          * @brief Converts screen coordinates to logical game world coordinates.
          * @param screenX Screen X coordinate in pixels
          * @param screenY Screen Y coordinate in pixels

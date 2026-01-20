@@ -33,6 +33,10 @@ struct SceneRenderer::Impl {
     int viewportWidth = 640;
     int viewportHeight = 480;
     
+    // Camera
+    float cameraOffsetX = 0.0f;
+    float cameraOffsetY = 0.0f;
+    
     // Sprite rendering system
     std::unique_ptr<Graphitech::SpriteRenderSystem> spriteRenderSystem = nullptr;
     bool spriteRenderSystemInitialized = false;
@@ -45,6 +49,12 @@ void SceneRenderer::setLogicalSize(int logicalW, int logicalH)
 {
     impl_->logicalWidth = logicalW;
     impl_->logicalHeight = logicalH;
+}
+
+void SceneRenderer::setCameraOffset(float x, float y)
+{
+    impl_->cameraOffsetX = x;
+    impl_->cameraOffsetY = y;
 }
 
 bool SceneRenderer::init(int w, int h, [[maybe_unused]] const char *title)
@@ -124,7 +134,12 @@ void SceneRenderer::setup2D(int windowW, int windowH, int logicalW, int logicalH
     }
     
     api.SetViewport(vpX, vpY, vpW, vpH);
-    api.SetOrtho2D(0.0f, logicalWidth, logicalHeight, 0.0f, -1.0f, 1.0f);
+    
+    float offX = impl ? impl->cameraOffsetX : 0.0f;
+    float offY = impl ? impl->cameraOffsetY : 0.0f;
+    
+    // Apply camera offset (shake) by shifting the ortho window
+    api.SetOrtho2D(-offX, logicalWidth - offX, logicalHeight - offY, -offY, -1.0f, 1.0f);
 }
 
 void SceneRenderer::render(ECS::Scene &scene)
@@ -247,6 +262,7 @@ void SceneRenderer::render(ECS::Scene &scene)
 
     // Render all sprites with textures using batch rendering
     if (impl_->spriteRenderSystem && impl_->spriteRenderSystemInitialized) {
+        impl_->spriteRenderSystem->SetCameraOffset(impl_->cameraOffsetX, impl_->cameraOffsetY);
         impl_->spriteRenderSystem->RenderSprites(scene, impl_->logicalWidth, impl_->logicalHeight);
     }
 
