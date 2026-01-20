@@ -17,6 +17,7 @@ namespace Graphitech {
         enum class PacketType : uint8_t {
             CLIENT_CONNECT = 0x01,
             SERVER_ACCEPT = 0x02,
+            UDP_HANDSHAKE = 0x05,
             PING = 0x03,
             PONG = 0x04,
             INPUT = 0x10,

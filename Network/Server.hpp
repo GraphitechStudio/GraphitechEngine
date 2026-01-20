@@ -3,6 +3,7 @@
 
 
 #include "UDPSocket.hpp"
+#include "TCPSocket.hpp"
 #include "Protocol.hpp"
 #include <unordered_map>
 #include <deque>
@@ -24,8 +25,22 @@ namespace Graphitech {
 
         struct ClientInfo {
             uint32_t id;
-            Endpoint endpoint;
+            Endpoint udpEndpoint;
+            TCPSocket tcpSocket; // Move-only
             std::chrono::steady_clock::time_point lastActive;
+            bool udpConnected = false;
+
+            ClientInfo() : id(0) {}
+            ClientInfo(uint32_t _id, TCPSocket&& _socket) 
+                : id(_id), tcpSocket(std::move(_socket)), lastActive(std::chrono::steady_clock::now()) {}
+            
+            // Allow move
+            ClientInfo(ClientInfo&& other) noexcept = default;
+            ClientInfo& operator=(ClientInfo&& other) noexcept = default;
+
+            // Delete copy
+            ClientInfo(const ClientInfo&) = delete;
+            ClientInfo& operator=(const ClientInfo&) = delete;
         };
 
         class Server {
@@ -35,27 +50,39 @@ namespace Graphitech {
 
             bool PopEvent(ServerEvent& event);
 
-            void SendToClient(uint32_t clientId, const std::vector<uint8_t>& data);
+            // Defaults to TCP (Reliable)
+            void SendToClient(uint32_t clientId, const std::vector<uint8_t>& data, bool reliable = true);
 
-            void Broadcast(const std::vector<uint8_t>& data);
+            // Defaults to UDP (Unreliable) for updates, TCP for events
+            void Broadcast(const std::vector<uint8_t>& data, bool reliable = true);
 
-            void CheckTimeouts(float timeoutSeconds = 5.0f);
+            void CheckTimeouts(float timeoutSeconds = 10.0f);
 
             bool IsRunning() const { return m_running; }
 
         private:
             void Poll();
-            void HandlePacket(const std::vector<uint8_t>& buffer, size_t size, const Endpoint& sender);
-            uint32_t GetOrCreateClient(const Endpoint& endpoint);
+            
+            // UDP Handler
+            void HandleUDPPacket(const std::vector<uint8_t>& buffer, size_t size, const Endpoint& sender);
+            
+            // TCP Handler
+            void HandleTCPPacket(uint32_t clientId, const std::vector<uint8_t>& buffer);
 
-            UDPSocket m_socket;
+            UDPSocket m_udpSocket;
+            TCPSocket m_tcpListener;
+            
             std::atomic<bool> m_running;
             
             std::thread m_networkThread;
             std::mutex m_mutex;
 
-            std::unordered_map<std::string, ClientInfo> m_clients;
-            std::unordered_map<uint32_t, std::string> m_idToKey;
+            // Map ClientID -> ClientInfo
+            std::unordered_map<uint32_t, ClientInfo> m_clients;
+            
+            // Map UDP Endpoint String -> ClientID
+            std::unordered_map<std::string, uint32_t> m_udpToId;
+            
             uint32_t m_nextClientId = 1;
 
             std::deque<ServerEvent> m_eventQueue;
