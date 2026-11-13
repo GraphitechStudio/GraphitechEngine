@@ -8,6 +8,7 @@
 #ifndef SCENERENDERER_HPP
 #define SCENERENDERER_HPP
 
+#include <functional>
 #include <memory>
 #include <glm/vec2.hpp>
 
@@ -30,6 +31,28 @@ namespace Graphitech {
      *
      * @ingroup Rendering
      */
+    /**
+     * @brief Frame information handed to render hooks.
+     *
+     * The framebuffer covers the whole window; the viewport is the letterboxed
+     * area that shows the logical game world.
+     */
+    struct RenderHookInfo {
+        int framebufferWidth = 0;
+        int framebufferHeight = 0;
+        int viewportX = 0;
+        int viewportY = 0;
+        int viewportWidth = 0;
+        int viewportHeight = 0;
+        int logicalWidth = 0;
+        int logicalHeight = 0;
+        float cameraOffsetX = 0.0f;
+        float cameraOffsetY = 0.0f;
+    };
+
+    /// Callback used by games to draw custom passes with their own GL state.
+    using RenderHook = std::function<void(const RenderHookInfo&)>;
+
     class SceneRenderer {
     public:
         SceneRenderer();
@@ -95,6 +118,19 @@ namespace Graphitech {
          * @param y Offset Y in logical pixels
          */
         void setCameraOffset(float x, float y);
+
+        /**
+         * @brief Sets a pass drawn right after the clear, before primitives and
+         * sprites. The viewport covers the whole framebuffer during the call
+         * (letterbox bars included) and is restored afterwards.
+         */
+        void setBackgroundHook(RenderHook hook);
+
+        /**
+         * @brief Sets a pass drawn after the sprites (effects, glows), with the
+         * game viewport active.
+         */
+        void setOverlayHook(RenderHook hook);
 
         /**
          * @brief Converts screen coordinates to logical game world coordinates.

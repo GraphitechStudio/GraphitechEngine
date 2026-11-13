@@ -41,6 +41,10 @@ struct SceneRenderer::Impl {
     // Camera
     float cameraOffsetX = 0.0f;
     float cameraOffsetY = 0.0f;
+
+    // Game render passes
+    Graphitech::RenderHook backgroundHook;
+    Graphitech::RenderHook overlayHook;
     
     // Sprite rendering system
     std::unique_ptr<Graphitech::SpriteRenderSystem> spriteRenderSystem = nullptr;
@@ -60,6 +64,16 @@ void SceneRenderer::setCameraOffset(float x, float y)
 {
     impl_->cameraOffsetX = x;
     impl_->cameraOffsetY = y;
+}
+
+void SceneRenderer::setBackgroundHook(RenderHook hook)
+{
+    impl_->backgroundHook = std::move(hook);
+}
+
+void SceneRenderer::setOverlayHook(RenderHook hook)
+{
+    impl_->overlayHook = std::move(hook);
 }
 
 bool SceneRenderer::init(int w, int h, [[maybe_unused]] const char *title)
@@ -209,7 +223,26 @@ void SceneRenderer::render(ECS::Scene &scene)
         if (cr && cg && cb) clearColor = Color{*cr, *cg, *cb, 1.0f};
     }
     api.SetClearColor(clearColor);
+    // Clear the whole framebuffer, letterbox bars included
+    api.SetViewport(0, 0, w, h);
     api.Clear(true, true);
+
+    RenderHookInfo hookInfo;
+    hookInfo.framebufferWidth = w;
+    hookInfo.framebufferHeight = h;
+    hookInfo.viewportX = impl_->viewportX;
+    hookInfo.viewportY = impl_->viewportY;
+    hookInfo.viewportWidth = impl_->viewportWidth;
+    hookInfo.viewportHeight = impl_->viewportHeight;
+    hookInfo.logicalWidth = impl_->logicalWidth;
+    hookInfo.logicalHeight = impl_->logicalHeight;
+    hookInfo.cameraOffsetX = impl_->cameraOffsetX;
+    hookInfo.cameraOffsetY = impl_->cameraOffsetY;
+
+    if (impl_->backgroundHook) {
+        impl_->backgroundHook(hookInfo);
+    }
+    api.SetViewport(impl_->viewportX, impl_->viewportY, impl_->viewportWidth, impl_->viewportHeight);
     
     static int frameCounter = 0;
     ++frameCounter;
@@ -278,6 +311,11 @@ void SceneRenderer::render(ECS::Scene &scene)
     if (impl_->spriteRenderSystem && impl_->spriteRenderSystemInitialized) {
         impl_->spriteRenderSystem->SetCameraOffset(impl_->cameraOffsetX, impl_->cameraOffsetY);
         impl_->spriteRenderSystem->RenderSprites(scene, impl_->logicalWidth, impl_->logicalHeight);
+    }
+
+    if (impl_->overlayHook) {
+        api.SetViewport(impl_->viewportX, impl_->viewportY, impl_->viewportWidth, impl_->viewportHeight);
+        impl_->overlayHook(hookInfo);
     }
 
     const std::string curMap = scene.getCurrentMap();
