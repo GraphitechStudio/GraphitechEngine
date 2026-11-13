@@ -14,7 +14,14 @@ namespace Graphitech {
     {
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+#if defined(__APPLE__)
+        // macOS has no 3.3 compatibility profile: use a forward-compatible core
+        // context (the render API emulates immediate mode on top of it).
+        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+        glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
+#else
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_COMPAT_PROFILE);
+#endif
 
         _internal = glfwCreateWindow
         (

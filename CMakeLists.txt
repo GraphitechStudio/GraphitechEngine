@@ -143,10 +143,11 @@ if(stb_ADDED AND DEFINED stb_SOURCE_DIR)
     target_include_directories(GraphitechEngine PUBLIC ${stb_SOURCE_DIR})
 endif()
 
+find_package(OpenGL REQUIRED)
 target_link_libraries(GraphitechEngine PUBLIC
     ${GLFW_LIBRARIES}
-    GL
-    dl
+    OpenGL::GL
+    ${CMAKE_DL_LIBS}
     pthread
 )
 
