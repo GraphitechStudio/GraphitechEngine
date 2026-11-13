@@ -205,16 +205,23 @@ void UIRenderer::DrawRect(float x, float y, float width, float height, const Col
         x,         y + height, color.r, color.g, color.b, color.a, 0.0f, 1.0f,
     };
 
+    // Filled: two triangles. Outline: the four corners in order, otherwise the
+    // line loop would follow the triangle indices and draw a diagonal.
     unsigned int indices[] = {
         0, 1, 2,
         2, 3, 0
     };
+    const unsigned int outlineIndices[] = { 0, 1, 2, 3 };
 
     glBindBuffer(GL_ARRAY_BUFFER, vbo_);
     glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo_);
-    glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, sizeof(indices), indices);
+    if (filled) {
+        glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, sizeof(indices), indices);
+    } else {
+        glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, sizeof(outlineIndices), outlineIndices);
+    }
 
     // Disable texture sampling for plain rects
     GLint useTexLoc = glGetUniformLocation(shaderProgram_, "useTexture");
