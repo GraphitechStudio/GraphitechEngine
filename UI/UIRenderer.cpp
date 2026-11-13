@@ -324,8 +324,51 @@ void UIRenderer::DrawText(const std::string& text, float x, float y, float size,
         vertices.insert(vertices.end(), {vx, vy, color.r, color.g, color.b, color.a, 0.0f, 0.0f});
     };
 
-    for (char c : text) {
-        const uint8_t* bitmap = BitmapFont::GetCharBitmap(c);
+    // Draw a slightly larger rectangle per pixel for better visibility
+    const float pixelSize = scale * 1.1f;
+    auto pushPixel = [&](float px, float py) {
+        pushVertex(px, py);
+        pushVertex(px + pixelSize, py);
+        pushVertex(px + pixelSize, py + pixelSize);
+        pushVertex(px + pixelSize, py + pixelSize);
+        pushVertex(px, py + pixelSize);
+        pushVertex(px, py);
+    };
+
+    // The bitmap font only has ASCII glyphs: decode UTF-8 and draw French
+    // accented letters as their base letter plus accent pixels.
+    enum Mark { None, Acute, Grave, Circumflex, Diaeresis, Cedilla, MiddleDot };
+    for (size_t i = 0; i < text.size(); ++i) {
+        unsigned char c = static_cast<unsigned char>(text[i]);
+        char base = static_cast<char>(c);
+        Mark mark = None;
+        if (c >= 0xC0 && i + 1 < text.size()) {
+            unsigned cp = ((c & 0x1Fu) << 6) | (static_cast<unsigned char>(text[i + 1]) & 0x3Fu);
+            i += (c >= 0xE0) ? ((c >= 0xF0) ? 3 : 2) : 1;
+            if (cp >= 0xE0 && cp <= 0xFE) cp -= 0x20; // lower to upper case
+            switch (cp) {
+                case 0xC0: base = 'A'; mark = Grave; break;
+                case 0xC2: base = 'A'; mark = Circumflex; break;
+                case 0xC4: base = 'A'; mark = Diaeresis; break;
+                case 0xC7: base = 'C'; mark = Cedilla; break;
+                case 0xC8: base = 'E'; mark = Grave; break;
+                case 0xC9: base = 'E'; mark = Acute; break;
+                case 0xCA: base = 'E'; mark = Circumflex; break;
+                case 0xCB: base = 'E'; mark = Diaeresis; break;
+                case 0xCE: base = 'I'; mark = Circumflex; break;
+                case 0xCF: base = 'I'; mark = Diaeresis; break;
+                case 0xD4: base = 'O'; mark = Circumflex; break;
+                case 0xD9: base = 'U'; mark = Grave; break;
+                case 0xDB: base = 'U'; mark = Circumflex; break;
+                case 0xDC: base = 'U'; mark = Diaeresis; break;
+                case 0xB7: base = ' '; mark = MiddleDot; break;
+                default: base = ' '; break;
+            }
+        } else if (c >= 0x80) {
+            base = ' ';
+        }
+
+        const uint8_t* bitmap = BitmapFont::GetCharBitmap(base);
         
         // Draw each pixel of the character
         for (int row = 0; row < BitmapFont::FONT_CHAR_HEIGHT; row++) {
@@ -334,19 +377,24 @@ void UIRenderer::DrawText(const std::string& text, float x, float y, float size,
             for (int col = 0; col < BitmapFont::FONT_CHAR_WIDTH; col++) {
                 // Check if pixel is set (from left to right)
                 if (rowData & (1 << (4 - col))) {
-                    float pixelX = currentX + col * scale;
-                    float pixelY = y + row * scale;
-                    
-                    // Draw a slightly larger rectangle for better visibility
-                    float pixelSize = scale * 1.1f;
-                    pushVertex(pixelX, pixelY);
-                    pushVertex(pixelX + pixelSize, pixelY);
-                    pushVertex(pixelX + pixelSize, pixelY + pixelSize);
-                    pushVertex(pixelX + pixelSize, pixelY + pixelSize);
-                    pushVertex(pixelX, pixelY + pixelSize);
-                    pushVertex(pixelX, pixelY);
+                    pushPixel(currentX + col * scale, y + row * scale);
                 }
             }
+        }
+
+        // Accent pixels: (column, row) relative to the glyph
+        static const int kMarks[7][3][2] = {
+            {{-9, 0}, {-9, 0}, {-9, 0}},
+            {{3, -3}, {2, -2}, {-9, 0}},   // acute
+            {{1, -3}, {2, -2}, {-9, 0}},   // grave
+            {{2, -3}, {1, -2}, {3, -2}},   // circumflex
+            {{1, -2}, {3, -2}, {-9, 0}},   // diaeresis
+            {{2, 7}, {1, 8}, {-9, 0}},     // cedilla
+            {{2, 3}, {-9, 0}, {-9, 0}},    // middle dot
+        };
+        for (const auto &px : kMarks[mark]) {
+            if (px[0] < 0) continue;
+            pushPixel(currentX + px[0] * scale, y + px[1] * scale);
         }
         
         currentX += charWidth + spacing;
