@@ -214,13 +214,13 @@ void UIRenderer::DrawRect(float x, float y, float width, float height, const Col
     const unsigned int outlineIndices[] = { 0, 1, 2, 3 };
 
     glBindBuffer(GL_ARRAY_BUFFER, vbo_);
-    glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STREAM_DRAW);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo_);
     if (filled) {
-        glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, sizeof(indices), indices);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STREAM_DRAW);
     } else {
-        glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, sizeof(outlineIndices), outlineIndices);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(outlineIndices), outlineIndices, GL_STREAM_DRAW);
     }
 
     // Disable texture sampling for plain rects
@@ -278,7 +278,7 @@ void UIRenderer::DrawCircle(float x, float y, float radius, const Color& color, 
     std::copy_n(&vertices[8], 8, &vertices[(segments + 1) * 8]);
     
     glBindBuffer(GL_ARRAY_BUFFER, vbo_);
-    glBufferSubData(GL_ARRAY_BUFFER, 0, vertices.size() * sizeof(float), vertices.data());
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STREAM_DRAW);
     
     if (filled) {
         glDrawArrays(GL_TRIANGLE_FAN, 0, segments + 2);
@@ -301,7 +301,7 @@ void UIRenderer::DrawLine(float x1, float y1, float x2, float y2, float thicknes
     };
     
     glBindBuffer(GL_ARRAY_BUFFER, vbo_);
-    glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STREAM_DRAW);
     
     glLineWidth(thickness);
     glDrawArrays(GL_LINES, 0, 2);
@@ -315,7 +315,15 @@ void UIRenderer::DrawText(const std::string& text, float x, float y, float size,
     float spacing = 1.5f * scale;
     
     float currentX = x;
-    
+
+    // Batch every lit pixel of the string into one buffer and one draw call
+    // (one draw per pixel stalls the GPU, especially on macOS).
+    std::vector<float> vertices;
+    vertices.reserve(text.size() * 20 * 6 * 8);
+    auto pushVertex = [&](float vx, float vy) {
+        vertices.insert(vertices.end(), {vx, vy, color.r, color.g, color.b, color.a, 0.0f, 0.0f});
+    };
+
     for (char c : text) {
         const uint8_t* bitmap = BitmapFont::GetCharBitmap(c);
         
@@ -331,13 +339,26 @@ void UIRenderer::DrawText(const std::string& text, float x, float y, float size,
                     
                     // Draw a slightly larger rectangle for better visibility
                     float pixelSize = scale * 1.1f;
-                    DrawRect(pixelX, pixelY, pixelSize, pixelSize, color, true);
+                    pushVertex(pixelX, pixelY);
+                    pushVertex(pixelX + pixelSize, pixelY);
+                    pushVertex(pixelX + pixelSize, pixelY + pixelSize);
+                    pushVertex(pixelX + pixelSize, pixelY + pixelSize);
+                    pushVertex(pixelX, pixelY + pixelSize);
+                    pushVertex(pixelX, pixelY);
                 }
             }
         }
         
         currentX += charWidth + spacing;
     }
+
+    if (vertices.empty()) return;
+
+    glBindBuffer(GL_ARRAY_BUFFER, vbo_);
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STREAM_DRAW);
+    GLint useTexLoc = glGetUniformLocation(shaderProgram_, "useTexture");
+    glUniform1i(useTexLoc, 0);
+    glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(vertices.size() / 8));
 }
 
 void UIRenderer::DrawTexture(unsigned int textureId, float x, float y, float width, float height, const Color& tint) {
@@ -362,11 +383,11 @@ void UIRenderer::DrawTexture(unsigned int textureId, float x, float y, float wid
 
     // Update vertex buffer
     glBindBuffer(GL_ARRAY_BUFFER, vbo_);
-    glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STREAM_DRAW);
 
     // Update element buffer
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo_);
-    glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, sizeof(indices), indices);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STREAM_DRAW);
 
     // Tell shader to use texture
     GLint useTexLoc = glGetUniformLocation(shaderProgram_, "useTexture");
