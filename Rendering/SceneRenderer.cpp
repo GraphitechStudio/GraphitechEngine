@@ -199,7 +199,16 @@ void SceneRenderer::render(ECS::Scene &scene)
     int w = fbW, h = fbH;
     setup2D(w, h, impl_->logicalWidth, impl_->logicalHeight, api, impl_.get());
     
-    api.SetClearColor({0.1f, 0.12f, 0.15f, 1.0f});
+    // Games may override the clear colour through map values (clearColorR/G/B)
+    Color clearColor{0.1f, 0.12f, 0.15f, 1.0f};
+    {
+        const std::string curMap = scene.getCurrentMap();
+        auto *cr = scene.getMapValue<float>(curMap, "clearColorR");
+        auto *cg = scene.getMapValue<float>(curMap, "clearColorG");
+        auto *cb = scene.getMapValue<float>(curMap, "clearColorB");
+        if (cr && cg && cb) clearColor = Color{*cr, *cg, *cb, 1.0f};
+    }
+    api.SetClearColor(clearColor);
     api.Clear(true, true);
     
     static int frameCounter = 0;
