@@ -34,6 +34,8 @@ public:
     void SetDoubleClickCallback(std::function<void()> callback) { onDoubleClick_ = callback; }
     
     void SetBackgroundColor(const Color& color) { backgroundColor_ = color; }
+    void SetHoverColor(const Color& color) { hoverColor_ = color; }
+    void SetPressedColor(const Color& color) { pressedColor_ = color; }
     void SetTextColor(const Color& color) { textColor_ = color; }
     void SetIconTexture(const std::string& path) { iconTexturePath_ = path; }
     void SetPreviewTexture(unsigned int textureId) { previewTextureId_ = textureId; hasPreviewTexture_ = true; }
